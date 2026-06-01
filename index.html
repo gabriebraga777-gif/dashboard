@@ -406,8 +406,32 @@ tbody tr:last-child td { border-bottom: none; }
   </section>
 
   <section class="section">
-    <div class="sec-head"><div class="sec-title">Destaques</div><div class="sec-meta">melhor & pior desempenho</div></div>
-    <div class="hl-grid" id="highlights"></div>
+    <div class="sec-head"><div class="sec-title">Registro de leads</div><div class="sec-meta" id="leadsRange">—</div></div>
+    <div class="table-wrap">
+      <div class="tbar">
+        <div class="tbar-l"><span style="font-size:13px;font-weight:500">Todos os leads</span><span class="count-pill" id="leadsCount">0</span></div>
+        <input type="text" class="search" placeholder="Buscar nome, email ou telefone..." oninput="setSearch(this.value)">
+      </div>
+      <div class="scroll">
+        <table>
+          <thead><tr>
+            <th onclick="sortBy('criado_em')">Data <span class="si">↓</span></th>
+            <th onclick="sortBy('nome')">Nome <span class="si">↕</span></th>
+            <th>Email</th><th>Telefone</th>
+            <th onclick="sortBy('faturamento')">Faturamento <span class="si">↕</span></th>
+            <th>Funcionários</th><th>Conjunto</th>
+            <th onclick="sortBy('status')">Status <span class="si">↕</span></th>
+          </tr></thead>
+          <tbody id="leadsBody"><tr><td colspan="8"><div class="spin-wrap"><div class="spin"></div></div></td></tr></tbody>
+        </table>
+      </div>
+      <div class="pag"><span id="pageInfo">—</span><div class="pag-c" id="pageCtrl"></div></div>
+    </div>
+  </section>
+
+  <section class="section">
+    <div class="sec-head"><div class="sec-title">Pipeline de leads</div><div class="sec-meta">clique para filtrar</div></div>
+    <div class="pipe-grid" id="pipeline"></div>
   </section>
 
   <section class="section">
@@ -449,37 +473,13 @@ tbody tr:last-child td { border-bottom: none; }
   </section>
 
   <section class="section">
-    <div class="sec-head"><div class="sec-title">Pipeline de leads</div><div class="sec-meta">clique para filtrar</div></div>
-    <div class="pipe-grid" id="pipeline"></div>
-  </section>
-
-  <section class="section">
     <div class="sec-head"><div class="sec-title">Reconciliação Meta × Planilha</div><div class="sec-meta" id="mmMeta">—</div></div>
     <div class="panel"><div id="mmBody"><div class="spin-wrap"><div class="spin"></div></div></div></div>
   </section>
 
   <section class="section">
-    <div class="sec-head"><div class="sec-title">Registro de leads</div><div class="sec-meta" id="leadsRange">—</div></div>
-    <div class="table-wrap">
-      <div class="tbar">
-        <div class="tbar-l"><span style="font-size:13px;font-weight:500">Todos os leads</span><span class="count-pill" id="leadsCount">0</span></div>
-        <input type="text" class="search" placeholder="Buscar nome, email ou telefone..." oninput="setSearch(this.value)">
-      </div>
-      <div class="scroll">
-        <table>
-          <thead><tr>
-            <th onclick="sortBy('criado_em')">Data <span class="si">↓</span></th>
-            <th onclick="sortBy('nome')">Nome <span class="si">↕</span></th>
-            <th>Email</th><th>Telefone</th>
-            <th onclick="sortBy('faturamento')">Faturamento <span class="si">↕</span></th>
-            <th>Funcionários</th><th>Conjunto</th>
-            <th onclick="sortBy('status')">Status <span class="si">↕</span></th>
-          </tr></thead>
-          <tbody id="leadsBody"><tr><td colspan="8"><div class="spin-wrap"><div class="spin"></div></div></td></tr></tbody>
-        </table>
-      </div>
-      <div class="pag"><span id="pageInfo">—</span><div class="pag-c" id="pageCtrl"></div></div>
-    </div>
+    <div class="sec-head"><div class="sec-title">Destaques</div><div class="sec-meta">melhor & pior desempenho</div></div>
+    <div class="hl-grid" id="highlights"></div>
   </section>
 
 </main>
