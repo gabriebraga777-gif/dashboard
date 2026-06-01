@@ -527,7 +527,7 @@ function applyTheme(t){theme=t;document.documentElement.setAttribute('data-theme
 function toggleTheme(){applyTheme(theme==='light'?'dark':'light')}
 
 // ===== PERIOD =====
-function periodDates(){const today=new Date('2026-05-26');let s=new Date(today)
+function periodDates(){const today=new Date();let s=new Date(today)
   if(S.period==='today')s=new Date(today);else if(S.period==='7d')s.setDate(today.getDate()-6);else if(S.period==='14d')s.setDate(today.getDate()-13);else if(S.period==='30d')s.setDate(today.getDate()-29);else return{start:null,end:null}
   return{start:s.toISOString().slice(0,10),end:today.toISOString().slice(0,10)}}
 function prevPeriodDates(){const{start,end}=periodDates();if(!start)return{start:null,end:null}
