@@ -728,6 +728,19 @@ function renderMM(){
   document.getElementById('mmBody').innerHTML=rows.length?`<div class="scroll"><table><thead><tr><th>Data</th><th>Campanha</th><th style="text-align:right">Meta</th><th style="text-align:right">Planilha</th><th style="text-align:right">Diferença</th></tr></thead><tbody>${rows.map(r=>`<tr><td class="c-num">${fdate(r.date)}</td><td><span class="c-mono">${r.camp}</span></td><td style="text-align:right" class="c-num">${r.meta}</td><td style="text-align:right" class="c-num">${r.sheet}</td><td style="text-align:right" class="c-num ${r.diff>0?'diff-p':r.diff<0?'diff-n':'diff-z'}">${r.diff>0?'+':''}${r.diff}</td></tr>`).join('')}</tbody></table></div>`:'<div class="empty">Sem dados</div>'
 }
 
+  // ===== LEADS POR DIA (PLANILHA) =====
+function renderLeadsPorDia(){
+  const byD={}
+  fLeads.forEach(l=>{
+    if(!l.criado_em)return
+    const d=l.criado_em.slice(0,10)
+    byD[d]=(byD[d]||0)+1
+  })
+  const days=Object.keys(byD).sort().reverse()
+  const rows=days.map(d=>({date:d,count:byD[d]}))
+  document.getElementById('leadsBody').innerHTML=rows.length?`<div class="scroll"><table><thead><tr><th>Data</th><th style="text-align:right">Leads da Planilha</th></tr></thead><tbody>${rows.map(r=>`<tr><td class="c-num">${fdate(r.date)}</td><td style="text-align:right" class="c-num">${r.count}</td></tr>`).join('')}</tbody></table></div>`:'<div class="empty">Sem dados</div>'
+}
+
 // ===== TABLE =====
 function renderLeads(){
   const total=fLeads.length,pages=Math.max(1,Math.ceil(total/PER))
@@ -740,7 +753,7 @@ function renderLeads(){
   document.getElementById('pageCtrl').innerHTML=`<button class="pg" ${S.page===1?'disabled':''} onclick="gotoPage(${S.page-1})">‹</button>${Array.from({length:Math.min(5,pages)},(_,i)=>{let p=Math.max(1,Math.min(S.page-2,pages-4))+i;if(p>pages)return'';return `<button class="pg ${p===S.page?'active':''}" onclick="gotoPage(${p})">${p}</button>`}).join('')}<button class="pg" ${S.page===pages?'disabled':''} onclick="gotoPage(${S.page+1})">›</button>`
 }
 
-function renderAll(){renderKpis();renderHighlights();renderLine();renderBar();renderFunnel();renderDonuts();renderAdsets();renderPipeline();renderMM();renderLeads()}
+function renderAll(){renderKpis();renderHighlights();renderLine();renderBar();renderFunnel();renderDonuts();renderAdsets();renderPipeline();;renderLeadsPorDia()();renderLeads()}
 
 // ===== ACTIONS =====
 function setPeriod(p,b){S.period=p;document.querySelectorAll('.seg .chip').forEach(c=>c.classList.remove('active'));b.classList.add('active');applyAll()}
