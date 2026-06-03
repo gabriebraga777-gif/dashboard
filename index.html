@@ -313,8 +313,9 @@ main { max-width: 1640px; margin: 0 auto; padding: 24px 28px 70px; position: rel
 .fn-conv { font-family: 'JetBrains Mono', monospace; font-size: 11px; color: var(--muted); margin-top: 3px; padding-left: 4px; }
 
 /* HIGHLIGHT CARDS */
-.hl-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 14px; }
-@media (max-width:900px){ .hl-grid{grid-template-columns:1fr} }
+.hl-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 14px; }
+@media (max-width:1100px){ .hl-grid{grid-template-columns:repeat(2,1fr)} }
+@media (max-width:560px){ .hl-grid{grid-template-columns:1fr} }
 .hl {
   background: var(--surface); border: 1px solid var(--border); border-radius: 16px; padding: 18px;
   position: relative; overflow: hidden; box-shadow: var(--shadow);
@@ -584,6 +585,16 @@ const FAT_QUALIFICA = ['100k-200k','200k-500k','500k-1m','acima-1m'] // tudo aci
 const FUN_QUALIFICA = ['6-15','16-50','51-100']                      // mais de 6 funcionários
 const isMQL = l => FAT_QUALIFICA.includes(l.faturamento) && FUN_QUALIFICA.includes(l.funcionarios)
 
+// Status derivado da PLANILHA: um lead que atende ao critério de qualificação
+// (faturamento >100k e 6+ funcionários) passa a contar como "qualificado".
+// Conversões reais são preservadas; demais mantêm o status de origem.
+function effStatus(l){
+  if(l.status==='convertido') return 'convertido'
+  if(isMQL(l)) return 'qualificado'
+  return l.status || 'novo'
+}
+function applyDerivedStatus(leads){leads.forEach(l=>{l.status=effStatus(l)})}
+
 // Janela (em dias) para considerar um conjunto ATIVO: teve gasto/impressão recentemente
 const ACTIVE_DAYS = 2
 
@@ -709,19 +720,22 @@ function renderKpis(){
   document.getElementById('kpiRange').textContent=r.start?`${r.start.split('-').reverse().join('/')} → ${r.end.split('-').reverse().join('/')}`:'todo o período'
 }
 
-// ===== HIGHLIGHTS (Menor CPMQL · Mais MQL) =====
-// MQL conta apenas leads QUALIFICADOS DA PLANILHA (faturamento >100k e 6+ funcionários).
-// CPMQL = gasto do conjunto (Meta) / nº de MQL do conjunto (planilha).
+// ===== HIGHLIGHTS (Menor CPMQL · Mais MQL · Menor CPL · Mais leads) =====
+// MQL = leads QUALIFICADOS da planilha (faturamento >100k e 6+ funcionários).
+// CPL e CPMQL usam o gasto da Meta ÷ leads da PLANILHA do conjunto.
 function renderHighlights(){
   const el=document.getElementById('highlights')
   const spend={};fMet.forEach(r=>{spend[r.adset_name]=(spend[r.adset_name]||0)+ +r.gasto})
+  const leadBy={};fLeads.forEach(l=>{const k=l.utm_content||'—';leadBy[k]=(leadBy[k]||0)+1})
   const mqlBy={};fLeads.forEach(l=>{ if(isMQL(l)){ const k=l.utm_content||'—'; mqlBy[k]=(mqlBy[k]||0)+1 } })
-  const names=[...new Set([...Object.keys(spend),...Object.keys(mqlBy)])]
-  const arr=names.map(n=>{const m=mqlBy[n]||0,g=spend[n]||0;return{n,mql:m,spend:g,cpmql:m>0?g/m:Infinity}})
+  const names=[...new Set([...Object.keys(spend),...Object.keys(leadBy),...Object.keys(mqlBy)])]
+  const arr=names.map(n=>{const g=spend[n]||0,ld=leadBy[n]||0,m=mqlBy[n]||0;return{n,spend:g,leads:ld,mql:m,cpl:ld>0?g/ld:Infinity,cpmql:m>0?g/m:Infinity}})
   if(!arr.length){el.innerHTML='<div class="empty" style="grid-column:1/-1">Sem dados no período</div>';return}
-  const withMql=arr.filter(a=>a.mql>0)
+  const withMql=arr.filter(a=>a.mql>0), withLeads=arr.filter(a=>a.leads>0)
   const bestCpmql=withMql.length?[...withMql].sort((a,b)=>a.cpmql-b.cpmql)[0]:null
   const mostMql=[...arr].sort((a,b)=>b.mql-a.mql)[0]
+  const bestCpl=withLeads.length?[...withLeads].sort((a,b)=>a.cpl-b.cpl)[0]:null
+  const mostLeads=[...arr].sort((a,b)=>b.leads-a.leads)[0]
   const cards=[
     {tag:'Menor CPMQL',ic:'<path d="m6 9 6 6 6-6"/>',c:'var(--positive)',
       name: bestCpmql? bestCpmql.n : '—',
@@ -730,7 +744,15 @@ function renderHighlights(){
     {tag:'Mais MQL',ic:'<path d="m18 15-6-6-6 6"/>',c:'var(--brand)',
       name: mostMql.mql>0? mostMql.n : '—',
       metric: num(mostMql.mql),
-      desc: mostMql.mql>0? `maior volume de leads qualificados` : 'nenhum MQL no período'}
+      desc: mostMql.mql>0? 'maior volume de leads qualificados' : 'nenhum MQL no período'},
+    {tag:'Menor CPL',ic:'<path d="m6 9 6 6 6-6"/>',c:'var(--info)',
+      name: bestCpl? bestCpl.n : '—',
+      metric: bestCpl? 'R$ '+brl(bestCpl.cpl) : '—',
+      desc: bestCpl? `melhor custo por lead · ${bestCpl.leads} leads` : 'nenhum lead no período'},
+    {tag:'Mais leads',ic:'<path d="m18 15-6-6-6 6"/>',c:'var(--purple)',
+      name: mostLeads.leads>0? mostLeads.n : '—',
+      metric: num(mostLeads.leads),
+      desc: mostLeads.leads>0? 'maior volume de leads no período' : 'nenhum lead no período'}
   ]
   el.innerHTML=cards.map(x=>`
     <div class="hl" style="--hlc:${x.c}">
@@ -808,14 +830,15 @@ function donutSVG(data,total){
 }
 function renderDonuts(){
   const lp=fLeads
-  const byFat={};FATS.forEach(f=>byFat[f]=0);lp.forEach(l=>{if(byFat[l.faturamento]!==undefined)byFat[l.faturamento]++})
-  const byFun={};FUNS.forEach(f=>byFun[f]=0);lp.forEach(l=>{if(byFun[l.funcionarios]!==undefined)byFun[l.funcionarios]++})
-  const dFat=Object.entries(byFat).map(([k,v])=>({k,v})),dFun=Object.entries(byFun).map(([k,v])=>({k,v}))
+  const byFat={};FATS.forEach(f=>byFat[f]=0);let niFat=0;lp.forEach(l=>{if(byFat[l.faturamento]!==undefined)byFat[l.faturamento]++;else niFat++})
+  const byFun={};FUNS.forEach(f=>byFun[f]=0);let niFun=0;lp.forEach(l=>{if(byFun[l.funcionarios]!==undefined)byFun[l.funcionarios]++;else niFun++})
+  const dFat=Object.entries(byFat).map(([k,v])=>({k,v}));if(niFat>0)dFat.push({k:'não informado',v:niFat})
+  const dFun=Object.entries(byFun).map(([k,v])=>({k,v}));if(niFun>0)dFun.push({k:'não informado',v:niFun})
   const tFat=dFat.reduce((a,b)=>a+b.v,0),tFun=dFun.reduce((a,b)=>a+b.v,0)
   document.getElementById('donutFat').innerHTML=donutSVG(dFat.map(x=>({v:x.v})),tFat)
   document.getElementById('legFat').innerHTML=dFat.map((d,i)=>`<div class="dl"><span class="dl-dot" style="background:${chartCols[i%chartCols.length]}"></span><span class="dl-name">${d.k}</span><span class="dl-val">${d.v}</span><span class="dl-pct">${tFat>0?(d.v/tFat*100).toFixed(0):0}%</span></div>`).join('')
   document.getElementById('donutFun').innerHTML=donutSVG(dFun.map(x=>({v:x.v})),tFun)
-  document.getElementById('legFun').innerHTML=dFun.map((d,i)=>`<div class="dl"><span class="dl-dot" style="background:${chartCols[i%chartCols.length]}"></span><span class="dl-name">${d.k} func</span><span class="dl-val">${d.v}</span><span class="dl-pct">${tFun>0?(d.v/tFun*100).toFixed(0):0}%</span></div>`).join('')
+  document.getElementById('legFun').innerHTML=dFun.map((d,i)=>`<div class="dl"><span class="dl-dot" style="background:${chartCols[i%chartCols.length]}"></span><span class="dl-name">${d.k==='não informado'?d.k:d.k+' func'}</span><span class="dl-val">${d.v}</span><span class="dl-pct">${tFun>0?(d.v/tFun*100).toFixed(0):0}%</span></div>`).join('')
 }
 
 // ===== AD SETS (ativos primeiro, com filtro e sinalização) =====
@@ -931,13 +954,14 @@ function exportCSV(){
 }
 
 function showConnError(show){const c=document.getElementById('connAlert');if(c)c.classList.toggle('show',!!show)}
-function loadDemo(){allMet=DEMO_METRICAS;allLeads=DEMO_LEADS;showConnError(false);popAdset();computeAdsetStatus();applyAll();document.getElementById('lastUpdate').textContent='exemplo';toast('Exibindo dados de exemplo')}
+function loadDemo(){allMet=DEMO_METRICAS;allLeads=DEMO_LEADS;applyDerivedStatus(allLeads);showConnError(false);popAdset();computeAdsetStatus();applyAll();document.getElementById('lastUpdate').textContent='exemplo';toast('Exibindo dados de exemplo')}
 
 async function loadAll(){
   document.getElementById('lastUpdate').textContent='sincronizando...'
   try{
     if(DEMO_MODE){allMet=DEMO_METRICAS;allLeads=DEMO_LEADS}
     else{const[m,l]=await Promise.all([query('metricas_meta','order=data.desc&limit=2000'),query('leads','order=criado_em.desc&limit=2000')]);allMet=m;allLeads=l}
+    applyDerivedStatus(allLeads)
     showConnError(false)
     popAdset();computeAdsetStatus();applyAll()
     document.getElementById('lastUpdate').textContent=new Date().toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'})
